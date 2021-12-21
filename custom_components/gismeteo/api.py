@@ -168,45 +168,36 @@ class GismeteoApiClient:
         """Retreive data from Gismeteo API and cache results."""
         _LOGGER.debug("Requesting URL %s", url)
 
-        if self._cache and cache_fname is not None:
-            cache_fname += ".xml"
-            if self._cache.is_cached(cache_fname):
-                _LOGGER.debug("Cached response used")
-                return self._cache.read_cache(cache_fname)
-
         async with self._session.get(url) as resp:
             if resp.status != HTTP_OK:
                 raise ApiError(f"Invalid response from Gismeteo API: {resp.status}")
             _LOGGER.debug("Data retrieved from %s, status: %s", url, resp.status)
             data = await resp.text()
 
-        if self._cache and cache_fname is not None and data:
-            self._cache.save_cache(cache_fname, data)
-
         return data
 
-    async def async_get_location(self):
-        """Retreive location data from Gismeteo."""
-        url = (
-            ENDPOINT_URL
-            + f"/cities/?lat={self._latitude}&lng={self._longitude}&count=1&lang=en"
-        )
-        cache_fname = f"location_{self._latitude}_{self._longitude}"
+    # async def async_get_location(self):
+    #     """Retreive location data from Gismeteo."""
+    #     url = (
+    #         ENDPOINT_URL
+    #         + f"/cities/?lat={self._latitude}&lng={self._longitude}&count=1&lang=en"
+    #     )
+    #     cache_fname = f"location_{self._latitude}_{self._longitude}"
 
-        response = await self._async_get_data(url, cache_fname)
-        try:
-            xml = etree.fromstring(response)
-            item = xml.find("item")
-            self._attributes = {
-                ATTR_ID: self._get(item, "id", int),
-                ATTR_NAME: self._get(item, "n"),
-                ATTR_LATITUDE: self._get(item, "lat", float),
-                ATTR_LONGITUDE: self._get(item, "lng", float),
-            }
-        except (etree.ParseError, TypeError, AttributeError) as ex:
-            raise ApiError(
-                "Can't retrieve location data! Invalid server response."
-            ) from ex
+    #     response = await self._async_get_data(url, cache_fname)
+    #     try:
+    #         xml = etree.fromstring(response)
+    #         item = xml.find("item")
+    #         self._attributes = {
+    #             ATTR_ID: self._get(item, "id", int),
+    #             ATTR_NAME: self._get(item, "n"),
+    #             ATTR_LATITUDE: self._get(item, "lat", float),
+    #             ATTR_LONGITUDE: self._get(item, "lng", float),
+    #         }
+    #     except (etree.ParseError, TypeError, AttributeError) as ex:
+    #         raise ApiError(
+    #             "Can't retrieve location data! Invalid server response."
+    #         ) from ex
 
     @staticmethod
     def _get(var: dict, ind: str, func: Optional[Callable] = None) -> Any:
@@ -390,8 +381,8 @@ class GismeteoApiClient:
 
     async def async_update(self) -> bool:
         """Get the latest data from Gismeteo."""
-        if self.attributes[ATTR_ID] is None:
-            await self.async_get_location()
+        # if self.attributes[ATTR_ID] is None:
+        #     await self.async_get_location()
 
         url = f"{ENDPOINT_URL}/forecast/?city={self.attributes[ATTR_ID]}&lang=en"
         cache_fname = f"forecast_{self.attributes[ATTR_ID]}"

@@ -74,7 +74,7 @@ def get_gismeteo(hass: HomeAssistant, config) -> GismeteoApiClient:
 async def _async_get_coordinator(hass: HomeAssistant, unique_id, config: dict):
     """Prepare update coordinator instance."""
     gismeteo = get_gismeteo(hass, config)
-    await gismeteo.async_get_location()
+    # await gismeteo.async_get_location()
 
     coordinator = GismeteoDataUpdateCoordinator(hass, unique_id, gismeteo)
     await coordinator.async_refresh()
