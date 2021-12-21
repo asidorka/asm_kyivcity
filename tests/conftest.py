@@ -21,7 +21,7 @@ from unittest.mock import patch
 import pytest
 from pytest_homeassistant_custom_component.common import load_fixture
 
-from custom_components.gismeteo import GismeteoApiClient
+from custom_components.asmkyivcity import GismeteoApiClient
 
 pytest_plugins = "pytest_homeassistant_custom_component"  # pylint: disable=invalid-name
 

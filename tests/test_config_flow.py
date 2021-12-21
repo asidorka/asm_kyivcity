@@ -9,7 +9,7 @@ from homeassistant.const import CONF_MODE, CONF_NAME, CONF_PLATFORM
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.gismeteo.const import (
+from custom_components.asmkyivcity.const import (
     CONF_FORECAST,
     DOMAIN,
     FORECAST_MODE_DAILY,

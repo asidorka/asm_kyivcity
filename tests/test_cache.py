@@ -8,7 +8,7 @@ from time import time
 
 import pytest
 
-from custom_components.gismeteo.cache import Cache
+from custom_components.asmkyivcity.cache import Cache
 
 
 @pytest.fixture()

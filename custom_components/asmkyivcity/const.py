@@ -30,10 +30,10 @@ from homeassistant.const import (
 )
 
 # Base component constants
-NAME = "Gismeteo"
-DOMAIN = "gismeteo"
+NAME = "Asmkyivcity"
+DOMAIN = "asmkyivcity"
 VERSION = "2.3.3"
-ATTRIBUTION = "Data provided by Gismeteo"
+ATTRIBUTION = "Data provided by http://asm.kyivcity.gov.ua/"
 ISSUE_URL = "https://github.com/Limych/ha-gismeteo/issues"
 
 STARTUP_MESSAGE = f"""
@@ -59,7 +59,7 @@ FORECAST_MODE_HOURLY = "hourly"
 FORECAST_MODE_DAILY = "daily"
 
 # Defaults
-DEFAULT_NAME = "Gismeteo"
+DEFAULT_NAME = "Asmkyivcity"
 
 # Attributes
 ATTR_SUNRISE = "sunrise"

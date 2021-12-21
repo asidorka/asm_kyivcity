@@ -20,12 +20,12 @@ from homeassistant.const import ATTR_ID, ATTR_NAME, HTTP_OK
 from pytest import raises
 from pytest_homeassistant_custom_component.common import load_fixture
 
-from custom_components.gismeteo.api import (
+from custom_components.asmkyivcity.api import (
     ApiError,
     GismeteoApiClient,
     InvalidCoordinatesError,
 )
-from custom_components.gismeteo.const import (
+from custom_components.asmkyivcity.const import (
     ATTR_WEATHER_CLOUDINESS,
     ATTR_WEATHER_PHENOMENON,
     ATTR_WEATHER_PRECIPITATION_INTENSITY,

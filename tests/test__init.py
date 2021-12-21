@@ -15,8 +15,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import MockConfigEntry, load_fixture
 
-from custom_components.gismeteo.api import ApiError, GismeteoApiClient
-from custom_components.gismeteo.const import CONF_FORECAST, DOMAIN
+from custom_components.asmkyivcity.api import ApiError, GismeteoApiClient
+from custom_components.asmkyivcity.const import CONF_FORECAST, DOMAIN
 
 from .const import MOCK_CONFIG
 

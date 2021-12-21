@@ -12,14 +12,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import assert_setup_component
 
-from custom_components.gismeteo import GismeteoDataUpdateCoordinator
-from custom_components.gismeteo.const import (
+from custom_components.asmkyivcity import GismeteoDataUpdateCoordinator
+from custom_components.asmkyivcity.const import (
     ATTRIBUTION,
     CONF_FORECAST,
     DOMAIN,
     SENSOR_TYPES,
 )
-from custom_components.gismeteo.sensor import GismeteoSensor, fix_kinds
+from custom_components.asmkyivcity.sensor import GismeteoSensor, fix_kinds
 
 from tests.const import MOCK_UNIQUE_ID
 

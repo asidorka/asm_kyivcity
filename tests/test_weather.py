@@ -6,9 +6,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import assert_setup_component
 
-from custom_components.gismeteo import GismeteoDataUpdateCoordinator
-from custom_components.gismeteo.const import DOMAIN
-from custom_components.gismeteo.weather import GismeteoWeather
+from custom_components.asmkyivcity import GismeteoDataUpdateCoordinator
+from custom_components.asmkyivcity.const import DOMAIN
+from custom_components.asmkyivcity.weather import GismeteoWeather
 
 from tests.const import MOCK_UNIQUE_ID
 
