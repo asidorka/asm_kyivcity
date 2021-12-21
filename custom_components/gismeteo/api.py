@@ -14,6 +14,8 @@ import time
 import xml.etree.ElementTree as etree  # type: ignore
 from datetime import datetime
 from typing import Any, Callable, Optional
+import re
+import json
 
 from aiohttp import ClientSession
 from homeassistant.components.weather import (
@@ -53,7 +55,7 @@ from homeassistant.const import (
 )
 from homeassistant.util import dt as dt_util
 
-from .cache import Cache
+
 from .const import (
     ATTR_FORECAST_CLOUDINESS,
     ATTR_FORECAST_GEOMAGNETIC_FIELD,
@@ -127,7 +129,6 @@ class GismeteoApiClient:
 
         self._session = session
         self._mode = mode
-        self._cache = Cache(params) if params.get("cache_dir") is not None else None
         self._latitude = latitude
         self._longitude = longitude
         self._attributes = {
@@ -164,9 +165,10 @@ class GismeteoApiClient:
         """Return forecast attributes."""
         return self._attributes
 
-    async def _async_get_data(self, url: str, cache_fname=None) -> str:
+    async def _async_get_data(self, url: str) -> str:
         """Retreive data from Gismeteo API and cache results."""
         _LOGGER.debug("Requesting URL %s", url)
+        # url = "https://asm.kyivcity.gov.ua/data/get-data?sensor_id=41&interval=ten_minutes&s_key=0.9240247345871653"
 
         async with self._session.get(url) as resp:
             if resp.status != HTTP_OK:
@@ -337,36 +339,36 @@ class GismeteoApiClient:
         """Return the forecast array."""
         src = src or self._forecast
         forecast = []
-        now = int(time.time())
-        dt_util.set_default_time_zone(self._timezone)
-        for i in src:
-            fc_time = i.get(ATTR_FORECAST_TIME)
-            if fc_time is None:
-                continue
+        # now = int(time.time())
+        # dt_util.set_default_time_zone(self._timezone)
+        # for i in src:
+        #     fc_time = i.get(ATTR_FORECAST_TIME)
+        #     if fc_time is None:
+        #         continue
 
-            data = {
-                ATTR_FORECAST_TIME: dt_util.as_local(
-                    datetime.utcfromtimestamp(fc_time)
-                ).isoformat(),
-                ATTR_FORECAST_CONDITION: self.condition(i),
-                ATTR_FORECAST_TEMP: self.temperature(i),
-                ATTR_FORECAST_PRESSURE: self.pressure_hpa(i),
-                ATTR_FORECAST_HUMIDITY: self.humidity(i),
-                ATTR_FORECAST_WIND_SPEED: self.wind_speed_kmh(i),
-                ATTR_FORECAST_WIND_BEARING: self.wind_bearing(i),
-                ATTR_FORECAST_PRECIPITATION: self.precipitation_amount(i),
-            }
+        #     data = {
+        #         ATTR_FORECAST_TIME: dt_util.as_local(
+        #             datetime.utcfromtimestamp(fc_time)
+        #         ).isoformat(),
+        #         ATTR_FORECAST_CONDITION: self.condition(i),
+        #         ATTR_FORECAST_TEMP: self.temperature(i),
+        #         ATTR_FORECAST_PRESSURE: self.pressure_hpa(i),
+        #         ATTR_FORECAST_HUMIDITY: self.humidity(i),
+        #         ATTR_FORECAST_WIND_SPEED: self.wind_speed_kmh(i),
+        #         ATTR_FORECAST_WIND_BEARING: self.wind_bearing(i),
+        #         ATTR_FORECAST_PRECIPITATION: self.precipitation_amount(i),
+        #     }
 
-            if (
-                self._mode == FORECAST_MODE_DAILY
-                and i.get(ATTR_FORECAST_TEMP_LOW) is not None
-            ):
-                data[ATTR_FORECAST_TEMP_LOW] = i.get(ATTR_FORECAST_TEMP_LOW)
+        #     if (
+        #         self._mode == FORECAST_MODE_DAILY
+        #         and i.get(ATTR_FORECAST_TEMP_LOW) is not None
+        #     ):
+        #         data[ATTR_FORECAST_TEMP_LOW] = i.get(ATTR_FORECAST_TEMP_LOW)
 
-            if fc_time < now:
-                forecast = [data]
-            else:
-                forecast.append(data)
+        #     if fc_time < now:
+        #         forecast = [data]
+        #     else:
+        #         forecast.append(data)
 
         return forecast
 
@@ -384,98 +386,44 @@ class GismeteoApiClient:
         # if self.attributes[ATTR_ID] is None:
         #     await self.async_get_location()
 
-        url = f"{ENDPOINT_URL}/forecast/?city={self.attributes[ATTR_ID]}&lang=en"
-        cache_fname = f"forecast_{self.attributes[ATTR_ID]}"
+        pravdaSensors = {ATTR_WEATHER_TEMPERATURE: 41, ATTR_WEATHER_HUMIDITY: 42}
+        pravdaData = {}
 
-        response = await self._async_get_data(url, cache_fname)
+        # url = f"https://asm.kyivcity.gov.ua//data/get-data?sensor_id=41&interval=ten_minutes&s_key=0.9240247345871653"
+        for attrId, sensorId in pravdaSensors.items():
+            response = await self._async_get_data(
+                "https://asm.kyivcity.gov.ua/data/get-data?sensor_id=" + str(sensorId)
+            )
+            json_arr = json.loads(response)
+            sensorValue = float(json_arr[-1][1])
+            pravdaData[attrId] = sensorValue
+            _LOGGER.debug("Sensor data: %s, %s", attrId, sensorValue)
         try:
-            xml = etree.fromstring(response)
-            tzone = int(xml.find("location").get("tzone"))
-            current = xml.find("location/fact")
-            current_v = current.find("values")
+
+            # m = re.match(r",([-]?[\d.]+)]]$", response,flags=re.)
 
             self._current = {
-                ATTR_SUNRISE: self._get(current, "sunrise", int),
-                ATTR_SUNSET: self._get(current, "sunset", int),
-                ATTR_WEATHER_CONDITION: self._get(current_v, "descr"),
-                ATTR_WEATHER_TEMPERATURE: self._get(current_v, "tflt", float),
-                ATTR_WEATHER_PRESSURE: self._get(current_v, "p", int),
-                ATTR_WEATHER_HUMIDITY: self._get(current_v, "hum", int),
-                ATTR_WEATHER_WIND_SPEED: self._get(current_v, "ws", int),
-                ATTR_WEATHER_WIND_BEARING: self._get(current_v, "wd", int),
-                ATTR_WEATHER_CLOUDINESS: self._get(current_v, "cl", int),
-                ATTR_WEATHER_PRECIPITATION_TYPE: self._get(current_v, "pt", int),
-                ATTR_WEATHER_PRECIPITATION_AMOUNT: self._get(current_v, "prflt", float),
-                ATTR_WEATHER_PRECIPITATION_INTENSITY: self._get(current_v, "pr", int),
-                ATTR_WEATHER_STORM: (self._get(current_v, "ts") == 1),
-                ATTR_WEATHER_GEOMAGNETIC_FIELD: self._get(current_v, "grade", int),
-                ATTR_WEATHER_PHENOMENON: self._get(current_v, "ph", int),
-                ATTR_WEATHER_WATER_TEMPERATURE: self._get(current_v, "water_t", float),
+                ATTR_SUNRISE: 1,
+                ATTR_SUNSET: 1,
+                ATTR_WEATHER_CONDITION: "ATTR_WEATHER_CONDITION",
+                ATTR_WEATHER_TEMPERATURE: float(pravdaData[ATTR_WEATHER_TEMPERATURE]),
+                ATTR_WEATHER_PRESSURE: 0,
+                ATTR_WEATHER_HUMIDITY: float(pravdaData[ATTR_WEATHER_HUMIDITY]),
+                ATTR_WEATHER_WIND_SPEED: 0,
+                ATTR_WEATHER_WIND_BEARING: 0,
+                ATTR_WEATHER_CLOUDINESS: 0,
+                ATTR_WEATHER_PRECIPITATION_TYPE: 0,
+                ATTR_WEATHER_PRECIPITATION_AMOUNT: 0.0,
+                ATTR_WEATHER_PRECIPITATION_INTENSITY: 0,
+                ATTR_WEATHER_STORM: False,
+                ATTR_WEATHER_GEOMAGNETIC_FIELD: 0,
+                ATTR_WEATHER_PHENOMENON: 0,
+                ATTR_WEATHER_WATER_TEMPERATURE: 0,
             }
 
             self._forecast = []
-            if self._mode == FORECAST_MODE_HOURLY:
-                for day in xml.findall("location/day"):
-                    sunrise = self._get(day, "sunrise", int)
-                    sunset = self._get(day, "sunset", int)
-
-                    for i in day.findall("forecast"):
-                        fc_v = i.find("values")
-                        data = {
-                            ATTR_SUNRISE: sunrise,
-                            ATTR_SUNSET: sunset,
-                            ATTR_FORECAST_TIME: self._get_utime(i.get("valid"), tzone),
-                            ATTR_FORECAST_CONDITION: self._get(fc_v, "descr"),
-                            ATTR_FORECAST_TEMP: self._get(fc_v, "t", int),
-                            ATTR_FORECAST_PRESSURE: self._get(fc_v, "p", int),
-                            ATTR_FORECAST_HUMIDITY: self._get(fc_v, "hum", int),
-                            ATTR_FORECAST_WIND_SPEED: self._get(fc_v, "ws", int),
-                            ATTR_FORECAST_WIND_BEARING: self._get(fc_v, "wd", int),
-                            ATTR_FORECAST_CLOUDINESS: self._get(fc_v, "cl", int),
-                            ATTR_FORECAST_PRECIPITATION_TYPE: self._get(
-                                fc_v, "pt", int
-                            ),
-                            ATTR_FORECAST_PRECIPITATION_AMOUNT: self._get(
-                                fc_v, "prflt", float
-                            ),
-                            ATTR_FORECAST_PRECIPITATION_INTENSITY: self._get(
-                                fc_v, "pr", int
-                            ),
-                            ATTR_FORECAST_STORM: (fc_v.get("ts") == 1),
-                            ATTR_FORECAST_GEOMAGNETIC_FIELD: self._get(
-                                fc_v, "grade", int
-                            ),
-                        }
-                        self._forecast.append(data)
-
-            else:  # self._mode == FORECAST_MODE_DAILY
-                for day in xml.findall("location/day[@descr]"):
-                    data = {
-                        ATTR_SUNRISE: self._get(day, "sunrise", int),
-                        ATTR_SUNSET: self._get(day, "sunset", int),
-                        ATTR_FORECAST_TIME: self._get_utime(day.get("date"), tzone),
-                        ATTR_FORECAST_CONDITION: self._get(day, "descr"),
-                        ATTR_FORECAST_TEMP: self._get(day, "tmax", int),
-                        ATTR_FORECAST_TEMP_LOW: self._get(day, "tmin", int),
-                        ATTR_FORECAST_PRESSURE: self._get(day, "p", int),
-                        ATTR_FORECAST_HUMIDITY: self._get(day, "hum", int),
-                        ATTR_FORECAST_WIND_SPEED: self._get(day, "ws", int),
-                        ATTR_FORECAST_WIND_BEARING: self._get(day, "wd", int),
-                        ATTR_FORECAST_CLOUDINESS: self._get(day, "cl", int),
-                        ATTR_FORECAST_PRECIPITATION_TYPE: self._get(day, "pt", int),
-                        ATTR_FORECAST_PRECIPITATION_AMOUNT: self._get(
-                            day, "prflt", float
-                        ),
-                        ATTR_FORECAST_PRECIPITATION_INTENSITY: self._get(
-                            day, "pr", int
-                        ),
-                        ATTR_FORECAST_STORM: (self._get(day, "ts") == 1),
-                        ATTR_FORECAST_GEOMAGNETIC_FIELD: self._get(
-                            day, "grademax", int
-                        ),
-                    }
-                    self._forecast.append(data)
-
+            data = {}
+            self._forecast.append(data)
             return True
 
         except (etree.ParseError, TypeError, AttributeError) as ex:
